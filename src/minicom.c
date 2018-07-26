@@ -811,6 +811,7 @@ static void helpthem(void)
     "Usage: %s [OPTION]... [configuration]\n"
     "A terminal program for Linux and other unix-like systems.\n\n"
     "  -b, --baudrate         : set baudrate (ignore the value from config)\n"
+    "  -j, --timestamp        : set timestamp (ignore the value from config)\n"
     "  -D, --device           : set device name (ignore the value from config)\n"
     "  -s, --setup            : enter setup mode\n"
     "  -o, --noinit           : do not initialize modem & lockfiles at startup\n"
@@ -1089,6 +1090,7 @@ int main(int argc, char **argv)
   char *cmd_dial;		/* Entry from the command line. */
   int alt_code = 0;		/* Type of alt key */
   char *cmdline_baudrate = NULL;/* Baudrate given on the command line via -b */
+  char *cmdline_timestamp = NULL; /* Timestamp given on the command line via -j */
   char *cmdline_device = NULL;  /* Device/Port given on the command line via -D */
   char *remote_charset = NULL;  /* Remote charset given on the command line via -R */
   char pseudo[64];
@@ -1118,6 +1120,7 @@ int main(int argc, char **argv)
     { "displayhex",    no_argument,       NULL, 'H' },
     { "disabletime",   no_argument,       NULL, 'T' }, // obsolete
     { "baudrate",      required_argument, NULL, 'b' },
+    { "timestamp",     required_argument, NULL, 'j' },
     { "device",        required_argument, NULL, 'D' },
     { "remotecharset", required_argument, NULL, 'R' },
     { "option",        required_argument, NULL, 'O' },
@@ -1225,7 +1228,7 @@ int main(int argc, char **argv)
 
   do {
     /* Process options with getopt */
-    while ((c = getopt_long(argk, args, "v78zhlLsomMHb:wTc:a:t:d:p:C:S:D:R:F:O:",
+    while ((c = getopt_long(argk, args, "v78zhlLsomMHbj:wTc:a:t:d:p:C:S:D:R:F:O:",
                             long_options, NULL)) != EOF)
       switch(c) {
 	case 'v':
@@ -1352,6 +1355,9 @@ int main(int argc, char **argv)
 	case 'b':
 	  cmdline_baudrate = optarg;
 	  break;
+	case 'j':
+	  cmdline_timestamp = optarg;
+	  break;
 	case 'D':
 	  cmdline_device = optarg;
 	  break;
@@ -1426,6 +1432,17 @@ int main(int argc, char **argv)
       snprintf(P_BAUDRATE, sizeof(P_BAUDRATE), "%d", b);
       P_BAUDRATE[sizeof(P_BAUDRATE) - 1] = 0;
     }
+  }
+
+  /* After reading in the config via read_parms we can possibly overwrite
+   * the timestamp with a value given at the cmdline */
+  if (cmdline_timestamp) {
+      unsigned int t = strtol(cmdline_timestamp, (char **)NULL, 0);
+      if (t >= TIMESTAMP_LINE_OFF && t <= TIMESTAMP_LINE_NR_OF_OPTIONS) {
+          line_timestamp = t;
+          line_timestamp %= TIMESTAMP_LINE_NR_OF_OPTIONS;
+          set_line_timestamp(line_timestamp);
+      }
   }
 
   /* Now we can also overwrite the device name, if one was given */
